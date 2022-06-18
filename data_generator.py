@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
 
-sigma = 0.1
+sigma = 15
 xs_length = 4
-data_size = 2000
-pv = 0.5
+data_size = 20000
+pv = 0.9
 
 
 #generate Xv
@@ -22,20 +22,43 @@ for i in range(data_size):
     if round(np.random.uniform(0, 1), 1) <= pv:
         y[i] = np.sign(data.values[i, 0])
     else:
-        y[i] = -np.sign(data.values[i, 0])
+        y[i] = -1*np.sign(data.values[i, 0])
 
 data['y'] = y
 
 #generate xs
 
 def envs(input):
-    if input <= data_size/2:
-        probility = 0.9
+    if input <= data_size/4:
+        probility = 0.5
         env = 1
-    else:
+    elif input <= 2 * data_size / 4 and input > data_size / 4:
+        probility = 0.6
+        env = 2
+    elif input <= 3 * data_size / 4 and input > 2 * data_size / 4:
+        probility = 0.2
+        env = 3
+    elif input <= 4 * data_size / 4 and input > 3 * data_size / 4:
+        probility = 0.1
+        env = 4
+    return probility, env
+
+def envs_train(input):
+    if input <= data_size/2:
+        probility = 0.999
+        env = 1
+    else :
         probility = 0.8
         env = 2
+    return probility, env
 
+def envs_test(input):
+    if input <= data_size/2:
+        probility = 0.2
+        env = 1
+    else :
+        probility = 0.1
+        env = 2
     return probility, env
 
 xs_total = []
@@ -46,7 +69,6 @@ for i in range(data_size):
     for j in range(xs_length):
         if round(np.random.uniform(0, 1), 1) <= k:
             xs_temp[j] = np.random.normal(data.values[i, 1], sigma)
-
         else:
             xs_temp[j] = np.random.normal(-1*data.values[i, 1], sigma)
     env_label[i] = env
@@ -60,4 +82,4 @@ data['env'] = env_label
 
 print(data)
 
-data.to_csv('Syntheic_data_test.csv')
+data.to_csv('Syntheic_data(pv=0.9,0.5,0.6,0.2,0.1).csv')

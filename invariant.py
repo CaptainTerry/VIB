@@ -16,16 +16,12 @@ sess = tf.InteractiveSession(config=config)
 input_dim = 5
 label_dim = 2
 
-sparsity_lambda = 1
-continuity_lambda = 5
-sparsity_percentage = 0.2
-diff_lambda = 10
+diff_lambda = 50
 BETA = 0.01
-# learning_rate = 1e-3
 
-n_hidden_1 = 128
-n_hidden_2 = 128
-n_hidden_3 = 64
+n_hidden_1 = 16
+n_hidden_2 = 16
+n_hidden_3 = 4
 n_hidden_4 = label_dim
 n_hidden_5 = label_dim
 
@@ -180,7 +176,7 @@ tf.summary.scalar('accuracy', accuracy)
 
 
 batch_size = 50
-steps_per_batch = int(2000 / batch_size)
+steps_per_batch = int(20000 / batch_size)
 summary_writer = tf.summary.FileWriter('/home/ali/TensorBoard', graph=tf.get_default_graph())
 
 #Optimization
@@ -229,18 +225,19 @@ tf.summary.scalar('accuracy_en', accuracy_env)
 
 
 def evaluate_test():
-    testbatch = test_buffer.sample_batch(200)
+    testbatch = test_buffer.sample_batch(20000)
     GEN, ENV_INV, acc_env,acc_inv = sess.run([GEN_Loss, ENV_INV_Loss, accuracy_env,accuracy], feed_dict={input: testbatch['input'], labels: testbatch['label'], envs: testbatch['env']})
     return GEN, ENV_INV, acc_env, acc_inv
 
 # main
 
 #traing data loading
-train_dataset = pd.read_csv("Syntheic_data.csv")
+train_dataset = pd.read_csv("Syntheic_data(pv=0.9,0.999,0.8).csv")
 
-input_column = ['xv', 'xs0', 'xs1', 'xs2', 'xs3']
+input_column1 = ['xv']
+input_column2 = ['xs' + str(i) for i in range(input_dim-1)]
 
-column_dict = {'input':train_dataset[input_column],
+column_dict = {'input':train_dataset[input_column1+input_column2],
                'label':train_dataset['y'],
                'env':train_dataset['env']}
 
@@ -248,14 +245,14 @@ train_buffer = Data_Buffer()
 train_buffer.load_from_csv(column_dict, len(train_dataset))
 
 #test data loading
-test_dataset = pd.read_csv("Syntheic_data_test.csv")
+test_dataset = pd.read_csv("Syntheic_data(pv=0.9,0.5,0.6,0.2,0.1).csv")
 
 test_buffer = Data_Buffer()
 test_buffer.load_from_csv(column_dict, len(test_dataset))
 
 #save_loss
 c = np.zeros((steps_per_batch, 3))
-for epoch in range(30):
+for epoch in range(500):
     for step in range(int(steps_per_batch)):
         path = step %7
         #get data

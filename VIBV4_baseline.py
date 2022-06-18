@@ -14,18 +14,15 @@ config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON
 sess = tf.InteractiveSession(config=config)
 
 
-from tensorflow.examples.tutorials.mnist import input_data
-mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
-n_sample = mnist.train.num_examples
-
 input_dim = 5
 label_dim = 2
 
-n_hidden_1 = 128
-n_hidden_2 = 128
-n_hidden_3 = 64
+n_hidden_1 = 16
+n_hidden_2 = 16
+n_hidden_3 = 4
 n_hidden_4 = label_dim
 
+BETA = 0.01
 
 
 input = tf.placeholder(tf.float32, shape=[None, input_dim], name='input')
@@ -135,7 +132,7 @@ with tf.name_scope('aproximation_to_prior'):
 with tf.name_scope('Class_Loss'):
     class_loss = tf.losses.softmax_cross_entropy(logits=pred, onehot_labels=labels)
 
-BETA = 0.01
+
 
 with tf.name_scope('Info_Loss'):
     info_loss = tf.reduce_sum(tf.reduce_mean(ds.kl_divergence(encoding, prior), 0)) /math.log(2)
@@ -154,7 +151,7 @@ IZX_bound = info_loss
 tf.summary.scalar('I(Z;X)', IZX_bound)
 
 batch_size = 50
-steps_per_batch = int(2000 / batch_size)
+steps_per_batch = int(20000 / batch_size)
 
 summary_writer = tf.summary.FileWriter('/home/ali/TensorBoard', graph=tf.get_default_graph())
 
@@ -176,17 +173,17 @@ tf.global_variables_initializer().run()
 merged_summary_op = tf.summary.merge_all()
 
 def evaluate_test():
-    testbatch = test_buffer.sample_batch(200)
+    testbatch = test_buffer.sample_batch(20000)
     IZY, IZX, acc = sess.run([IZY_bound, IZX_bound, accuracy], feed_dict={input: testbatch['input'], labels: testbatch['label']})
-    #print(sig_z)
     return IZY, IZX, acc, 1-acc
 
 #traing data loading
-train_dataset = pd.read_csv("Syntheic_data.csv")
+train_dataset = pd.read_csv("Syntheic_data(pv=0.9,0.999,0.8).csv")
 
-input_column = ['xv', 'xs0', 'xs1', 'xs2', 'xs3']
+input_column1 = ['xv']
+input_column2 = ['xs' + str(i) for i in range(input_dim-1)]
 
-column_dict = {'input':train_dataset[input_column],
+column_dict = {'input':train_dataset[input_column1+input_column2],
                'label':train_dataset['y'],
                'env':train_dataset['env']}
 
@@ -194,7 +191,7 @@ train_buffer = Data_Buffer()
 train_buffer.load_from_csv(column_dict, len(train_dataset))
 
 #test data loading
-test_dataset = pd.read_csv("Syntheic_data_test.csv")
+test_dataset = pd.read_csv("Syntheic_data(pv=0.9,0.5,0.6,0.2,0.1).csv")
 
 test_buffer = Data_Buffer()
 test_buffer.load_from_csv(column_dict, len(test_dataset))
@@ -203,17 +200,13 @@ test_buffer.load_from_csv(column_dict, len(test_dataset))
 import sys
 c1 = np.zeros(steps_per_batch)
 
-for epoch in range(30):
+for epoch in range(500):
     for step in range(int(steps_per_batch)):
-        # im, ls = mnist.train.next_batch(batch_size)
 
         batch = train_buffer.sample_batch(batch_size)
 
         _, c = sess.run([train_tensor, total_loss], feed_dict={input: batch['input'], labels: batch['label']})
-        #print(step)
-        #summary_writer.add_summary(summary, epoch * steps_per_batch + step)
-        #print(mnist.train.num_examples)
-        #print(epoch * steps_per_batch + step)
+
     print("{}: IZY_Test={:.2f}\t IZX_Test={:.2f}\t acc_Test={:.4f}\t err_Test={:.4f}".format(epoch, *evaluate_test()))
     sys.stdout.flush()
 
